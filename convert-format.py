@@ -4,7 +4,7 @@ filename_in = './wikiElec.ElecBs3.txt'
 fi = open(filename_in, 'r', errors='replace')
 lines = fi.readlines()[6:]
 
-filename_out = f'{filename_in[:-3]}.triples.txt'
+filename_out = f'{filename_in[:-3]}triples'
 fo = open(filename_out, 'w')
 fo.write('#!c++\n')
 
