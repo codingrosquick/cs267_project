@@ -11,7 +11,6 @@ filename_out = f'{filename_in[:-3]}triples'
 filename_orig_out = f'{filename_in[:-3]}orig'
 
 fo = open(filename_out, 'w')
-fo.write('#!c++\n')
 
 
 
