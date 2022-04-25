@@ -1,3 +1,5 @@
 # python virtual env
 .venv
 build/
+
+settings.json
