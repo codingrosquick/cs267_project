@@ -20,7 +20,7 @@ endif ()
 
 add_executable(condense condense-edges.cpp)
 
-# target_link_libraries(condense PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(condense PRIVATE OpenMP::OpenMP_CXX)
 
 # Copy the job scripts
 configure_file(job-condense job-condense COPYONLY)
