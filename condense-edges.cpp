@@ -105,7 +105,7 @@ void color_all_nodes(int n_nodes, list<bool>& node_colors_mapping, std::vector<i
     }        
 }
 
-int count_wrong_edges(std::vector<std::vector<std::pair<int,int>>> initial_graph, bool[] node_colors) {
+int count_wrong_edges(int n_nodes, std::vector<std::vector<std::pair<int,int>>>& initial_graph, list<bool>& node_colors) {
     int frustration_count = 0;
     
     // TODO: parallelize this loop as well
@@ -173,6 +173,6 @@ int main(int argc, char** argv) {
     std::vector<bool> cluster_to_color_mapping = [];
 
     color_all_nodes(n_nodes, node_colors_mapping, node_to_cluster_mapping, cluster_to_color_mapping);
-    frustration_index = count_wrong_edges(initial_graph, node_colors);
+    frustration_index = count_wrong_edges(n_nodes, initial_graph, node_colors);
     return frustration_index;
 }
