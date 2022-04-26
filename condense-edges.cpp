@@ -91,6 +91,40 @@ void dump_cluster_graph_in_METIS(int n_clusters, int n_cluster_edges, int *clust
     output_graph_fp.close();
 }
 
+void color_all_nodes(int n_nodes, list<bool>& node_colors_mapping, std::vector<int>& node_to_cluster_mapping, std::vector<bool>& cluster_to_color_mapping) {
+    // TODO: parallelize this
+    for (int u = 0; u < n_nodes; ++u) {
+        int cluster = node_to_cluster_mapping[u];
+        bool color = cluster_to_color_mapping[cluster];
+        // If color is +1, we change the mapping.
+        // If color is 0, the mapping stays unchanged.
+        if (color) {
+            node_colors_mapping[u] = true;
+        }
+
+    }        
+}
+
+int count_wrong_edges(std::vector<std::vector<std::pair<int,int>>> initial_graph, bool[] node_colors) {
+    int frustration_count = 0;
+    
+    // TODO: parallelize this loop as well
+    for (int u = 0; u < n_nodes; ++u) {
+        bool current_node_color = node_colors[u];
+        for (std::vector<std::pair<int,int>>::iterator it = u_nbrs.begin(); it != u_nbrs.end(); ++it) {
+            other_color = node_colors[it.first];
+            edge = it.second;
+            // test for equality: (((other_color == current_node_color) && (edge == 1)) || ((other_color != current_node_color) && (edge == -1)))
+            if (((other_color == current_node_color) && (edge == -1)) || ((other_color != current_node_color) && (edge == 1))) {
+                ++frustration_count;
+            }
+        }
+    }
+    // probably needs a reduce to sum all of this up
+    
+    return frustration_count;
+}
+
 int main(int argc, char** argv) {
     int n_nodes, n_clusters, n_cluster_edges = 0;
     std::string cluster_file = "/global/homes/a/afrozalm/proj/dataset/wikiElec.triples.hipmcl";
@@ -105,6 +139,8 @@ int main(int argc, char** argv) {
 
     n_nodes = initial_graph.size();
     node_to_cluster_map = std::vector<int>(n_nodes);
+
+    bool node_colors_mapping[n_nodes] = { false }; // Used for coloring the nodes
 
     populate_clusters(cluster_file, clusters, node_to_cluster_map);
 
@@ -128,5 +164,15 @@ int main(int argc, char** argv) {
     }
 
     dump_cluster_graph_in_METIS(n_clusters, n_cluster_edges, cluster_graph, output_graph_file);
-    return 0;
+    // return 0;
+
+
+    // Suppose we have the cluster colors in a mapping std::vector<bool>
+    // We put node colors into "node_colors" map
+    // We can also log the edges to be changed
+    std::vector<bool> cluster_to_color_mapping = [];
+
+    color_all_nodes(n_nodes, node_colors_mapping, node_to_cluster_mapping, cluster_to_color_mapping);
+    frustration_index = count_wrong_edges(initial_graph, node_colors);
+    return frustration_index;
 }
