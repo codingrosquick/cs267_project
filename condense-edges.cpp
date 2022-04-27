@@ -15,13 +15,17 @@
  */
 
 #include <chrono>
+#include <climits>
 #include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <random>
-#include <vector>
 #include <sstream>
+#include <vector>
+
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
 
 void unpack(std::string& line, int& u, int& v, int& e) {
     int temp[3], idx = 0;
@@ -81,21 +85,49 @@ void populate_clusters(std::string& file, std::vector<std::vector<int>>& cluster
     std::cout << "found " << clusters.size() << " clusters\n";
 }
 
-void dump_cluster_graph_in_METIS(int n_clusters, int n_cluster_edges, int *cluster_graph, std::string output_graph_file) {
-    std::ofstream output_graph_fp;
-    output_graph_fp.open( output_graph_file );
-    output_graph_fp << n_clusters << " " << n_cluster_edges << "\n";
+void dump_cluster_graph_in_METIS(int n_clusters, int min_edge, int max_edge, int *cluster_graph, std::string output_graph_file) {
+    int total_edges = 0;
+    std::string out_buffer;
 
     // TODO: do the duplication thingy after talking to aravinth
+    // cal the minimimum, use that as an offset, then do e^(c* (wt+offset))
+    for (int u = 0; u < n_clusters; ++u) {
+        int *u_adjacency = cluster_graph + u * n_clusters;
+        for (int v = 0; v < n_clusters; ++v) {
+            int e = u_adjacency[v];
+            if ( e < 0 ) {
+                total_edges++;
+                out_buffer.append(std::to_string(v));
+                out_buffer.push_back(' ');
+                // output_graph_fp << v << " ";
+            } else if (e > 0) {
+                total_edges += 2;
+                out_buffer.append(std::to_string(v));
+                out_buffer.push_back(' ');
+                out_buffer.append(std::to_string(v));
+                out_buffer.push_back(' ');
+            }
+        }
+        out_buffer.push_back('\n');
+    }
 
+    std::ofstream output_graph_fp;
+    output_graph_fp.open( output_graph_file );
+    output_graph_fp << n_clusters << " " << total_edges << "\n";
+    output_graph_fp << out_buffer;
     output_graph_fp.close();
+    std::cout << "with total edges: " << total_edges << "\n";
 }
 
 int main(int argc, char** argv) {
-    int n_nodes, n_clusters, n_cluster_edges = 0;
-    std::string cluster_file = "/global/homes/a/afrozalm/proj/dataset/wikiElec.triples.hipmcl";
-    std::string initial_graph_file = "/global/homes/a/afrozalm/proj/dataset/cs267_project/wikiElec.orig";
-    std::string output_graph_file = "/global/homes/a/afrozalm/proj/dataset/scotch-graph.txt";
+    int n_nodes, n_clusters, min_edge = INT_MAX, max_edge = INT_MIN;
+    int normal_edges = 0;
+    if (argc != 4) {
+        std::cout << "Usage ./condense <cluster_file.hipmcl> <initial_graph_file.orig> <output_graph_file.txt>\n";
+    }
+    std::string cluster_file = argv[1];
+    std::string initial_graph_file = argv[2];
+    std::string output_graph_file = argv[3];
 
     std::vector<std::vector<std::pair<int,int>>> initial_graph; // u -> [ (v, w), ... ]
     std::vector<std::vector<int>> clusters; // [[u1, u2, u3, ...], [v1, v2, ..]]
@@ -110,9 +142,9 @@ int main(int argc, char** argv) {
 
     n_clusters = clusters.size();
     int *cluster_graph = (int*) malloc( n_clusters * n_clusters * sizeof(int) );
+    memset(cluster_graph, 0, n_clusters * n_clusters * sizeof(int));
 
-    // TODO: parallel here
-    #pragma openmp parallel for
+    #pragma omp parallel for
     for (int u = 0; u < n_nodes; ++u) {
         int u_cluster = node_to_cluster_map[u];
         int *u_cluster_offset = cluster_graph + u_cluster * n_clusters;
@@ -121,12 +153,15 @@ int main(int argc, char** argv) {
             int v = it->first, e = it->second;
             int v_cluster = node_to_cluster_map[v];
             if (u_cluster != v_cluster) {
-                n_cluster_edges++;
+                int empty = (u_cluster_offset[v_cluster] == 0);
+                normal_edges += empty;
                 u_cluster_offset[v_cluster] += e;
+                min_edge = min(u_cluster_offset[v_cluster], min_edge);
+                max_edge = max(u_cluster_offset[v_cluster], max_edge);
             }
         }
     }
-
-    dump_cluster_graph_in_METIS(n_clusters, n_cluster_edges, cluster_graph, output_graph_file);
+    std::cout << "normal edge is " << normal_edges << "\n";
+    dump_cluster_graph_in_METIS(n_clusters, min_edge, max_edge, cluster_graph, output_graph_file);
     return 0;
 }
