@@ -19,6 +19,7 @@ if (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
 endif ()
 
 add_executable(condense condense-edges.cpp)
+add_executable(inflate frustration_index_calc.cpp)
 
 target_link_libraries(condense PRIVATE OpenMP::OpenMP_CXX)
 
